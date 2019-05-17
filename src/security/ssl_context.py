@@ -130,6 +130,7 @@ def create_server_ssl_context(
     ca_file: T.Optional[T.Union[Path, str]] = None,
     ca_path: T.Optional[T.Union[Path, str]] = None,
     ca_data: T.Optional[T.Union[object, str]] = None,
+    crl_path: T.Optional[T.Union[Path, str]] = None,
     protocols: T.Optional[T.List[str]] = None,
 ) -> ssl.SSLContext:
     """Create SSL context for Antenna servers.
@@ -142,6 +143,7 @@ def create_server_ssl_context(
             specific layout
         ca_data: ASCII string of one or more PEM-encoded certificates or a bytes-like object of
             DER-encoded certificates
+        crl_path: Path to a certificate revocation list file.
         protocols: ALPN and NPN protocols accepted
 
     Raises:
@@ -156,8 +158,9 @@ def create_server_ssl_context(
     if not (
         (ca_path is None or Path(ca_path).is_dir())
         and (ca_file is None or Path(ca_file).is_file())
+        and (crl_path is None or Path(crl_path).is_file())
     ):
-        raise FileNotFoundError("ca_path or ca_file are not valid or don't exist")
+        raise FileNotFoundError("ca_path or ca_file or crl_path are not valid or don't exist")
 
     # Create SSLContext
     ctx = ssl.create_default_context(
@@ -167,7 +170,19 @@ def create_server_ssl_context(
     # Configure OpenSSL for server use
     ctx.options |= _SERVER_OPTIONS
 
-    # Python 3.7 set minimum supported TLS version to TLSv1_2
+    # Disable workarounds for broken X509 certificates
+    ctx.verify_flags |= ssl.VERIFY_X509_STRICT
+
+    # Enforce client certificate validation
+    if ca_path or ca_file or ca_data:
+        ctx.verify_mode = ssl.CERT_REQUIRED
+        # Enable verification of certificate revocation list
+        if crl_path:
+            ctx.load_verify_locations(crl_path)
+            # VERIFY_CRL_CHECK_CHAIN must come after loading CRL of it will fail
+            ctx.verify_flags |= ssl.VERIFY_CRL_CHECK_CHAIN
+
+    # Set minimum supported TLS version to TLSv1_2 in Python >= 3.7
     if hasattr(ctx, "minimum_version"):
         ctx.minimum_version = getattr(getattr(ssl, "TLSVersion", 0), "TLSv1_2", 771)
 
@@ -191,10 +206,6 @@ def create_server_ssl_context(
     # Load server certificate and private key
     # Raises FileNotFoundError if any given path is invalid
     ctx.load_cert_chain(cert_file, key_file)
-
-    # Enforce client certificate validation
-    if ca_path or ca_file or ca_data:
-        ctx.verify_mode = ssl.CERT_REQUIRED
 
     if protocols:
         try:
@@ -220,6 +231,8 @@ def create_client_ssl_context(
     ca_file: T.Optional[T.Union[Path, str]] = None,
     ca_path: T.Optional[T.Union[Path, str]] = None,
     ca_data: T.Optional[T.Union[object, str]] = None,
+    crl_path: T.Optional[T.Union[Path, str]] = None,
+    protocols: T.Optional[T.List[str]] = None,
     check_hostname: bool = True,
     verify_server_cert: bool = True,
 ) -> ssl.SSLContext:
@@ -233,6 +246,8 @@ def create_client_ssl_context(
             specific layout
         ca_data: ASCII string of one or more PEM-encoded certificates or a bytes-like object of
             DER-encoded certificates
+        crl_path: Path to a certificate revocation list file.
+        protocols: ALPN and NPN protocols accepted
         check_hostname: Server hostname match (default: {False})
         verify_server_cert: Activate server cert check
 
@@ -248,8 +263,9 @@ def create_client_ssl_context(
     if not (
         (ca_path is None or Path(ca_path).is_dir())
         and (ca_file is None or Path(ca_file).is_file())
+        and (crl_path is None or Path(crl_path).is_file())
     ):
-        raise FileNotFoundError("ca_path or ca_file are not valid or don't exist")
+        raise FileNotFoundError("ca_path or ca_file or crl_path are not valid or don't exist")
 
     # Create SSLContext
     ctx = ssl.create_default_context(
@@ -259,11 +275,20 @@ def create_client_ssl_context(
     # Configure OpenSSL for server use
     ctx.options |= _CLIENT_OPTIONS
 
+    # Disable workarounds for broken X509 certificates
+    ctx.verify_flags |= ssl.VERIFY_X509_STRICT
+
     # Configure server hostname match with server certificate's hostname
     ctx.check_hostname = check_hostname
 
     # Configure verification of server certificate
     ctx.verify_mode = ssl.CERT_REQUIRED if verify_server_cert else ssl.CERT_NONE
+
+    # Enable verification of certificate revocation list
+    if crl_path:
+        ctx.load_verify_locations(crl_path)
+        # VERIFY_CRL_CHECK_CHAIN must come after loading CRL of it will fail
+        ctx.verify_flags |= ssl.VERIFY_CRL_CHECK_CHAIN
 
     # Define cryptographic ciphers accepted by client contexts
     # Raises SSLError for unavailable or invalid ciphers
@@ -273,12 +298,18 @@ def create_client_ssl_context(
     # Raises FileNotFoundError if any path is invalid
     ctx.load_cert_chain(cert_file, key_file)
 
-    try:
-        # Define server accepted protocols as described in RFC7301
-        # https://tools.ietf.org/html/rfc7301.html
-        ctx.set_alpn_protocols(["http/1.1"])
-    except (MemoryError, TypeError) as exc:
-        # Normalize errors
-        raise ssl.SSLError("ALPN protocols must be a List of valid string names") from exc
+    if protocols:
+        try:
+            # Define server accepted protocols as described in RFC7301
+            # https://tools.ietf.org/html/rfc7301.html
+            # https://www.iana.org/assignments/tls-extensiontype-values/tls-extensiontype-values.xhtml#alpn-protocol-ids
+            ctx.set_alpn_protocols(protocols)
+
+            # NPN is not necessarily available
+            with suppress(NotImplementedError):
+                ctx.set_npn_protocols(protocols)
+        except (MemoryError, TypeError) as exc:
+            # Normalize errors
+            raise ssl.SSLError("ALPN protocols must be a List of valid string names") from exc
 
     return ctx
