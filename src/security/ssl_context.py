@@ -130,7 +130,7 @@ def create_server_ssl_context(
     ca_file: T.Optional[T.Union[Path, str]] = None,
     ca_path: T.Optional[T.Union[Path, str]] = None,
     ca_data: T.Optional[T.Union[object, str]] = None,
-    crl_path: T.Optional[T.Union[Path, str]] = None,
+    crl_file: T.Optional[T.Union[Path, str]] = None,
     protocols: T.Optional[T.List[str]] = None,
 ) -> ssl.SSLContext:
     """Create SSL context for Antenna servers.
@@ -143,7 +143,7 @@ def create_server_ssl_context(
             specific layout
         ca_data: ASCII string of one or more PEM-encoded certificates or a bytes-like object of
             DER-encoded certificates
-        crl_path: Path to a certificate revocation list file.
+        crl_file: Path to a certificate revocation list file.
         protocols: ALPN and NPN protocols accepted
 
     Raises:
@@ -158,9 +158,9 @@ def create_server_ssl_context(
     if not (
         (ca_path is None or Path(ca_path).is_dir())
         and (ca_file is None or Path(ca_file).is_file())
-        and (crl_path is None or Path(crl_path).is_file())
+        and (crl_file is None or Path(crl_file).is_file())
     ):
-        raise FileNotFoundError("ca_path or ca_file or crl_path are not valid or don't exist")
+        raise FileNotFoundError("ca_path or ca_file or crl_file are not valid or don't exist")
 
     # Create SSLContext
     ctx = ssl.create_default_context(
@@ -177,8 +177,8 @@ def create_server_ssl_context(
     if ca_path or ca_file or ca_data:
         ctx.verify_mode = ssl.CERT_REQUIRED
         # Enable verification of certificate revocation list
-        if crl_path:
-            ctx.load_verify_locations(crl_path)
+        if crl_file:
+            ctx.load_verify_locations(crl_file)
             # VERIFY_CRL_CHECK_CHAIN must come after loading CRL of it will fail
             ctx.verify_flags |= ssl.VERIFY_CRL_CHECK_CHAIN
 
@@ -231,7 +231,7 @@ def create_client_ssl_context(
     ca_file: T.Optional[T.Union[Path, str]] = None,
     ca_path: T.Optional[T.Union[Path, str]] = None,
     ca_data: T.Optional[T.Union[object, str]] = None,
-    crl_path: T.Optional[T.Union[Path, str]] = None,
+    crl_file: T.Optional[T.Union[Path, str]] = None,
     protocols: T.Optional[T.List[str]] = None,
     check_hostname: bool = True,
     verify_server_cert: bool = True,
@@ -246,7 +246,7 @@ def create_client_ssl_context(
             specific layout
         ca_data: ASCII string of one or more PEM-encoded certificates or a bytes-like object of
             DER-encoded certificates
-        crl_path: Path to a certificate revocation list file.
+        crl_file: Path to a certificate revocation list file.
         protocols: ALPN and NPN protocols accepted
         check_hostname: Server hostname match (default: {False})
         verify_server_cert: Activate server cert check
@@ -263,9 +263,9 @@ def create_client_ssl_context(
     if not (
         (ca_path is None or Path(ca_path).is_dir())
         and (ca_file is None or Path(ca_file).is_file())
-        and (crl_path is None or Path(crl_path).is_file())
+        and (crl_file is None or Path(crl_file).is_file())
     ):
-        raise FileNotFoundError("ca_path or ca_file or crl_path are not valid or don't exist")
+        raise FileNotFoundError("ca_path or ca_file or crl_file are not valid or don't exist")
 
     # Create SSLContext
     ctx = ssl.create_default_context(
@@ -285,8 +285,8 @@ def create_client_ssl_context(
     ctx.verify_mode = ssl.CERT_REQUIRED if verify_server_cert else ssl.CERT_NONE
 
     # Enable verification of certificate revocation list
-    if crl_path:
-        ctx.load_verify_locations(crl_path)
+    if crl_file:
+        ctx.load_verify_locations(crl_file)
         # VERIFY_CRL_CHECK_CHAIN must come after loading CRL of it will fail
         ctx.verify_flags |= ssl.VERIFY_CRL_CHECK_CHAIN
 
