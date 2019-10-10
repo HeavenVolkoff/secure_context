@@ -46,9 +46,9 @@ import importlib_resources
 
 # Requirements checks
 if version_info < (3, 6):
-    raise RuntimeError("Minimum required Python version: 3.7")
+    raise RuntimeError("Minimum required Python version: 3.6")
 
-if ssl.OPENSSL_VERSION_INFO < (1, 0, 1):
+if ssl.OPENSSL_VERSION_INFO < (1, 1, 0, 8):
     raise RuntimeError("Minimum required OpenSSL version: 1.1.0h")
 
 if not getattr(ssl, "HAS_TLSv1_2", hasattr(ssl, "PROTOCOL_TLSv1_2")):
@@ -108,7 +108,7 @@ _CLIENT_OPTIONS = (
     # TLS renegotiation is complicated and has been removed from TLS 1.3.
     # Also it is not supported on the OS X and Windows native cryptography implementations.
     # https://jira.mongodb.org/browse/PYTHON-1726
-    | getattr(ssl, "OP_NO_RENEGOTIATION", 0)
+    | getattr(ssl, "OP_NO_RENEGOTIATION", 0x40000000)
 )
 _SERVER_OPTIONS = (
     _CLIENT_OPTIONS
@@ -123,13 +123,35 @@ _SERVER_OPTIONS = (
 )
 
 
+def _load_cert_key_protocols(
+    ctx: ssl.SSLContext, cert_file: str, key_file: str, protocols: T.Optional[T.List[str]]
+) -> None:
+    # Load server certificate and private key
+    # Raises FileNotFoundError if any given path is invalid
+    ctx.load_cert_chain(str(cert_file), str(key_file))
+
+    if protocols:
+        try:
+            # Define server accepted protocols as described in RFC7301
+            # https://tools.ietf.org/html/rfc7301.html
+            # https://www.iana.org/assignments/tls-extensiontype-values/tls-extensiontype-values.xhtml#alpn-protocol-ids
+            ctx.set_alpn_protocols(protocols)
+
+            # NPN is not necessarily available
+            with suppress(NotImplementedError):
+                ctx.set_npn_protocols(protocols)
+        except (MemoryError, TypeError) as exc:
+            # Normalize errors
+            raise ssl.SSLError("ALPN protocols must be a List of valid string names") from exc
+
+
 def create_server_ssl_context(
     cert_file: T.Union[Path, str],
     key_file: T.Union[Path, str],
     *,
     ca_file: T.Optional[T.Union[Path, str]] = None,
     ca_path: T.Optional[T.Union[Path, str]] = None,
-    ca_data: T.Optional[T.Union[object, str]] = None,
+    ca_data: T.Optional[T.Union[bytes, str]] = None,
     crl_file: T.Optional[T.Union[Path, str]] = None,
     protocols: T.Optional[T.List[str]] = None,
 ) -> ssl.SSLContext:
@@ -164,7 +186,7 @@ def create_server_ssl_context(
 
     # Create SSLContext
     ctx = ssl.create_default_context(
-        purpose=ssl.Purpose.CLIENT_AUTH, cafile=ca_file, capath=ca_path, cadata=ca_data
+        purpose=ssl.Purpose.CLIENT_AUTH, cafile=str(ca_file), capath=str(ca_path), cadata=ca_data
     )
 
     # Configure OpenSSL for server use
@@ -178,7 +200,7 @@ def create_server_ssl_context(
         ctx.verify_mode = ssl.CERT_REQUIRED
         # Enable verification of certificate revocation list
         if crl_file:
-            ctx.load_verify_locations(crl_file)
+            ctx.load_verify_locations(str(crl_file))
             # VERIFY_CRL_CHECK_CHAIN must come after loading CRL of it will fail
             ctx.verify_flags |= ssl.VERIFY_CRL_CHECK_CHAIN
 
@@ -203,23 +225,7 @@ def create_server_ssl_context(
         # Load Diffie-Hellman parameters
         ctx.load_dh_params(dh_params_path)
 
-    # Load server certificate and private key
-    # Raises FileNotFoundError if any given path is invalid
-    ctx.load_cert_chain(cert_file, key_file)
-
-    if protocols:
-        try:
-            # Define server accepted protocols as described in RFC7301
-            # https://tools.ietf.org/html/rfc7301.html
-            # https://www.iana.org/assignments/tls-extensiontype-values/tls-extensiontype-values.xhtml#alpn-protocol-ids
-            ctx.set_alpn_protocols(protocols)
-
-            # NPN is not necessarily available
-            with suppress(NotImplementedError):
-                ctx.set_npn_protocols(protocols)
-        except (MemoryError, TypeError) as exc:
-            # Normalize errors
-            raise ssl.SSLError("ALPN protocols must be a List of valid string names") from exc
+    _load_cert_key_protocols(ctx, str(cert_file), str(key_file), protocols)
 
     return ctx
 
@@ -269,7 +275,10 @@ def create_client_ssl_context(
 
     # Create SSLContext
     ctx = ssl.create_default_context(
-        purpose=ssl.Purpose.SERVER_AUTH, cafile=ca_file, capath=ca_path, cadata=ca_data
+        purpose=ssl.Purpose.SERVER_AUTH,
+        cafile=str(ca_file),
+        capath=str(ca_path),
+        cadata=str(ca_data),
     )
 
     # Configure OpenSSL for server use
@@ -286,7 +295,7 @@ def create_client_ssl_context(
 
     # Enable verification of certificate revocation list
     if crl_file:
-        ctx.load_verify_locations(crl_file)
+        ctx.load_verify_locations(str(crl_file))
         # VERIFY_CRL_CHECK_CHAIN must come after loading CRL of it will fail
         ctx.verify_flags |= ssl.VERIFY_CRL_CHECK_CHAIN
 
@@ -294,22 +303,6 @@ def create_client_ssl_context(
     # Raises SSLError for unavailable or invalid ciphers
     ctx.set_ciphers(_CYPHERS)
 
-    # Load server certificate and private key
-    # Raises FileNotFoundError if any path is invalid
-    ctx.load_cert_chain(cert_file, key_file)
-
-    if protocols:
-        try:
-            # Define server accepted protocols as described in RFC7301
-            # https://tools.ietf.org/html/rfc7301.html
-            # https://www.iana.org/assignments/tls-extensiontype-values/tls-extensiontype-values.xhtml#alpn-protocol-ids
-            ctx.set_alpn_protocols(protocols)
-
-            # NPN is not necessarily available
-            with suppress(NotImplementedError):
-                ctx.set_npn_protocols(protocols)
-        except (MemoryError, TypeError) as exc:
-            # Normalize errors
-            raise ssl.SSLError("ALPN protocols must be a List of valid string names") from exc
+    _load_cert_key_protocols(ctx, str(cert_file), str(key_file), protocols)
 
     return ctx
