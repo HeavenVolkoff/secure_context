@@ -141,7 +141,7 @@ def _setup_ca(
     ca_data: T.Optional[T.Union[bytes, str]],
     crl_file: T.Optional[T.Union[str, Path]],
     ca_load_default: bool,
-) -> None:
+) -> bool:
     # Disable workarounds for broken X509 certificates
     ctx.verify_flags |= ssl.VERIFY_X509_STRICT
 
@@ -153,7 +153,7 @@ def _setup_ca(
         )
         # No ca was passed, disable certificate validation
         ctx.verify_mode = ssl.CERT_NONE
-        return
+        return False
 
     if ca_path and not Path(ca_path).is_dir():
         raise NotADirectoryError("ca_path must be a directory")
@@ -181,6 +181,8 @@ def _setup_ca(
 
         # VERIFY_CRL_CHECK_CHAIN must come after loading CRL of it will fail
         ctx.verify_flags |= ssl.VERIFY_CRL_CHECK_CHAIN
+
+    return True
 
 
 def _load_cert_key_protocols(
@@ -262,6 +264,10 @@ def create_server_ssl_context(
     # Configure OpenSSL for server use
     ctx.options |= _SERVER_OPTIONS
 
+    # TODO: Think of a way to expose this option in a useful manner for validating clients
+    #  certificates
+    ctx.check_hostname = False
+
     _setup_ca(ctx, ca_file, ca_path, ca_data, crl_file, ca_load_default)
 
     # Set minimum supported TLS version to TLSv1_2 in Python >= 3.7
@@ -328,13 +334,15 @@ def create_client_ssl_context(
     # Create SSLContext
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 
-    _setup_ca(ctx, ca_file, ca_path, ca_data, crl_file, ca_load_default=False)
+    # Disable check_hostname before setup ca to avoid errors
+    ctx.check_hostname = False
+    if _setup_ca(ctx, ca_file, ca_path, ca_data, crl_file, ca_load_default=False):
+        # Configure server hostname match with server certificate's hostname
+        # Only if _setup_ca was successful
+        ctx.check_hostname = check_hostname
 
     # Configure OpenSSL for client use
     ctx.options |= _CLIENT_OPTIONS
-
-    # Configure server hostname match with server certificate's hostname
-    ctx.check_hostname = check_hostname
 
     # Define cryptographic ciphers accepted by client contexts
     # Raises SSLError for unavailable or invalid ciphers
