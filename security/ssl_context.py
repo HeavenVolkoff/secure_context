@@ -41,6 +41,7 @@ import typing as T
 from os import environ
 from sys import version_info
 from pathlib import Path
+from warnings import warn
 from contextlib import suppress
 
 # External
@@ -125,6 +126,10 @@ _SERVER_OPTIONS = (
 )
 
 
+class SSLWarning(RuntimeWarning):
+    pass
+
+
 def _str_or_none(obj: T.Any) -> T.Optional[str]:
     return obj if obj is None else str(obj)
 
@@ -141,6 +146,13 @@ def _setup_ca(
     ctx.verify_flags |= ssl.VERIFY_X509_STRICT
 
     if not any((ca_file, ca_path, ca_data, ca_load_default)):
+        warn(
+            "No Certificate Authority was provided to load into the SSLContext, "
+            "disabling certificate verification",
+            SSLWarning,
+        )
+        # No ca was passed, disable certificate validation
+        ctx.verify_mode = ssl.CERT_NONE
         return
 
     if ca_path and not Path(ca_path).is_dir():
@@ -190,17 +202,23 @@ def _load_cert_key_protocols(
                 ctx.set_npn_protocols(protocols)
         except (MemoryError, TypeError) as exc:
             # Normalize errors
-            raise ssl.SSLError("ALPN protocols must be a List of valid string names") from exc
+            raise ssl.SSLError("ALPN protocols must be a list of valid string names") from exc
 
 
 def _enable_key_log_file(ctx: ssl.SSLContext) -> None:
     # Python >= 3.8 only
     if hasattr(ctx, "keylog_filename"):
-        key_log_file = ""
+        key_log_file: T.Optional[str] = ""
         if __debug__ and not sys.flags.ignore_environment:
             key_log_file = environ.get("SSLKEYLOGFILE")
 
-        setattr(ctx, "keylog_filename", key_log_file if key_log_file else None)
+        if key_log_file:
+            warn(
+                f"SSL log enabled. All packages will be logged to file: {key_log_file}", SSLWarning
+            )
+            ctx.keylog_filename = key_log_file
+        else:
+            ctx.keylog_filename = None
 
 
 def create_server_ssl_context(
