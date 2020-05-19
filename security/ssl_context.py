@@ -207,22 +207,6 @@ def _load_cert_key_protocols(
             raise ssl.SSLError("ALPN protocols must be a list of valid string names") from exc
 
 
-def _enable_key_log_file(ctx: ssl.SSLContext) -> None:
-    # Python >= 3.8 only
-    if hasattr(ctx, "keylog_filename"):
-        key_log_file: T.Optional[str] = ""
-        if __debug__ and not sys.flags.ignore_environment:
-            key_log_file = environ.get("SSLKEYLOGFILE")
-
-        if key_log_file:
-            warn(
-                f"SSL log enabled. All packages will be logged to file: {key_log_file}", SSLWarning
-            )
-            ctx.keylog_filename = key_log_file
-        else:
-            ctx.keylog_filename = None
-
-
 def create_server_ssl_context(
     cert_file: T.Union[Path, str],
     key_file: T.Union[Path, str],
@@ -293,8 +277,6 @@ def create_server_ssl_context(
 
     _load_cert_key_protocols(ctx, str(cert_file), str(key_file), protocols)
 
-    _enable_key_log_file(ctx)
-
     return ctx
 
 
@@ -349,7 +331,5 @@ def create_client_ssl_context(
     ctx.set_ciphers(_CYPHERS)
 
     _load_cert_key_protocols(ctx, str(cert_file), str(key_file), protocols)
-
-    _enable_key_log_file(ctx)
 
     return ctx

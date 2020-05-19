@@ -1,5 +1,5 @@
 # External
-from importlib_metadata import version
+from importlib_metadata import version  # type: ignore
 
 # Project
 from .ssl_context import create_client_ssl_context, create_server_ssl_context
