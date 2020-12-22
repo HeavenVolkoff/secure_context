@@ -13,7 +13,6 @@ test:python36:
   image: python:3.6-buster
   before_script:
     - *script_template
-    - apt-get -y install build-essential
   script:
     - *test_script_definition
 
@@ -21,7 +20,6 @@ test:python37:
   image: python:3.7-buster
   before_script:
     - *script_template
-    - apt-get -y install build-essential
   script:
     - *test_script_definition
 
@@ -29,7 +27,6 @@ test:python38:
   image: python:3.8-buster
   before_script:
     - *script_template
-    - apt-get -y install build-essential
   script:
     - *test_script_definition
 
@@ -37,6 +34,5 @@ test:python39:
   image: python:3.9-buster
   before_script:
     - *script_template
-    - apt-get -y install build-essential
   script:
     - *test_script_definition
