@@ -279,7 +279,7 @@ def create_server_ssl_context(
             f"Current OpenSSL does not support any of the ECDH curves in: {', '.join(_ECDH_CURVES)}"
         )
 
-    with resources.path("security", "ffdhe4096") as dh_params_path:
+    with resources.path(__package__, "ffdhe4096") as dh_params_path:
         # Load Diffie-Hellman parameters
         ctx.load_dh_params(str(dh_params_path))
 
