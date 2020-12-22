@@ -5,7 +5,7 @@ Offers methods for creation of client and server secure contexts that improve up
 
 Warning
 -------
-    LAST MODIFIED DATE: 15/05/2019
+    LAST MODIFIED DATE: 21/12/2020
     All definitions here must be constantly reviewed and modified to ensure a capable secure system.
 
 TODO
@@ -38,14 +38,18 @@ Minimum requirements
 import ssl
 import sys
 import typing as T
-from os import environ
 from sys import version_info
 from pathlib import Path
 from warnings import warn
 from contextlib import suppress
 
-# External
-import importlib_resources
+if sys.version_info < (3, 9):
+    # External
+    import importlib_resources as resources
+else:
+    # Internal
+    from importlib import resources
+
 
 # Requirements checks
 if version_info < (3, 6):
@@ -74,7 +78,11 @@ if not ssl.HAS_ALPN:
     )
 
 # Define accepted cryptographic ciphers
-# https://wiki.mozilla.org/Security/Server_Side_TLS#Modern_compatibility
+# https://wiki.mozilla.org/Security/Server_Side_TLS#Intermediate_compatibility_.28recommended.29
+# Only valid for TLS 1.2:
+#   OpenSSL 1.1.1 has TLS 1.3 cipher suites enabled by default. The suites cannot be disabled with
+#   set_ciphers().
+#   https://docs.python.org/3/library/ssl.html#ssl.SSLContext.set_ciphers
 # The current definition include ciphers specified in RFC7905.
 #   Aimed at client with newer software/hardware support and need of future-proof security and/or
 #   improved performance.
@@ -271,9 +279,9 @@ def create_server_ssl_context(
             f"Current OpenSSL does not support any of the ECDH curves in: {', '.join(_ECDH_CURVES)}"
         )
 
-    with importlib_resources.path("security", "ffdhe4096") as dh_params_path:
+    with resources.path("security", "ffdhe4096") as dh_params_path:
         # Load Diffie-Hellman parameters
-        ctx.load_dh_params(dh_params_path)
+        ctx.load_dh_params(str(dh_params_path))
 
     _load_cert_key_protocols(ctx, str(cert_file), str(key_file), protocols)
 

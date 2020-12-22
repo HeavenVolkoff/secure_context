@@ -1,12 +1,20 @@
-# External
-from importlib_metadata import version  # type: ignore
+# Internal
+import sys
 
 # Project
 from .ssl_context import create_client_ssl_context, create_server_ssl_context
 
+if sys.version_info < (3, 8):
+    # External
+    from importlib_metadata import version
+else:
+    # Internal
+    from importlib.metadata import version
+
 try:
     __version__: str = version(__name__)
 except Exception:  # pragma: no cover
+    # Internal
     import traceback
     from warnings import warn
 
