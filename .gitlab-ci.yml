@@ -1,17 +1,3 @@
-.before_script_template: &before_script_definition
-  - set -euo pipefail
-  - '[ -n "$SSH_PRIVATE_KEY" ] || { echo "Missing SSH_KEY env var" && exit 1; }'
-  - apt-get update -y
-  - apt-get -y install git openssh-client
-  - eval $(ssh-agent -s)
-  - mkdir -p ~/.ssh
-  - chmod 700 ~/.ssh
-  - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
-  - chmod 600 ~/.ssh/id_rsa
-  - ssh-add ~/.ssh/id_rsa
-  - ssh-keyscan -p 2222 git.exyon.local > ~/.ssh/known_hosts
-  - chmod 644 ~/.ssh/known_hosts
-
 .script_template: &script_template
   - set -euo pipefail
 
@@ -27,7 +13,6 @@ test:python36:
   image: python:3.6-buster
   before_script:
     - *script_template
-    - *before_script_definition
     - apt-get -y install build-essential
   script:
     - *test_script_definition
@@ -36,7 +21,6 @@ test:python37:
   image: python:3.7-buster
   before_script:
     - *script_template
-    - *before_script_definition
     - apt-get -y install build-essential
   script:
     - *test_script_definition
@@ -45,7 +29,6 @@ test:python38:
   image: python:3.8-buster
   before_script:
     - *script_template
-    - *before_script_definition
     - apt-get -y install build-essential
   script:
     - *test_script_definition
@@ -54,7 +37,6 @@ test:python39:
   image: python:3.9-buster
   before_script:
     - *script_template
-    - *before_script_definition
     - apt-get -y install build-essential
   script:
     - *test_script_definition
