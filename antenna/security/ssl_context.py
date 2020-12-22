@@ -264,7 +264,7 @@ def create_server_ssl_context(
 
     # Set minimum supported TLS version to TLSv1_2 in Python >= 3.7
     if hasattr(ctx, "minimum_version"):
-        ctx.minimum_version = getattr(getattr(ssl, "TLSVersion", 0), "TLSv1_2", 771)
+        setattr(ctx, "minimum_version", getattr(getattr(ssl, "TLSVersion", 0), "TLSv1_2", 771))
 
     # Define cryptographic ciphers accepted by server contexts
     # Raises SSLError for unavailable or invalid ciphers
