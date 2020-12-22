@@ -3,7 +3,7 @@
 
 .test_script_template: &test_script_definition
   - pip install -e .[tests]
-  - mypy -p antenna.security
+  - mypy --python-executable "$(which python)" -p antenna.security
   - python -m unittest discover -s tests
 
 stages:
