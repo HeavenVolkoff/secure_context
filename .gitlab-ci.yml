@@ -3,7 +3,9 @@
 
 .test_script_template: &test_script_definition
   - pip install -e .[tests]
-  - mypy --python-executable "$(which python)" -p antenna.security
+  # Use --no-warn-unused-ignores while following issue is not fixed
+  # https://github.com/python/mypy/issues/8823
+  - mypy --python-executable "$(which python)" -p antenna.security --no-warn-unused-ignores
   - python -m unittest discover -s tests
 
 stages:
