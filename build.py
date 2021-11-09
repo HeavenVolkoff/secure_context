@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # type: ignore
 """Modified version of build.py from pendulum (Copyright (c) 2015 Sébastien Eustace)
 Original:

@@ -2,7 +2,11 @@
 import sys
 
 # Project
-from .ssl_context import create_server_ssl_context, create_client_authentication_ssl_context
+from .ssl_context import (
+    SSLWarning,
+    create_server_ssl_context,
+    create_client_authentication_ssl_context,
+)
 
 if sys.version_info >= (3, 8):
     # Internal
@@ -34,6 +38,7 @@ __all__ = (
     "__author__",
     "__version__",
     "__summary__",
+    "SSLWarning",
     "create_server_ssl_context",
     "create_client_authentication_ssl_context",
 )

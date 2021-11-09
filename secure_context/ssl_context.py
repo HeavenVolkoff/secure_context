@@ -40,6 +40,7 @@ Minimum requirements
 # Internal
 import ssl
 import sys
+from os import environ
 from typing import Any, List, Union, Callable, Optional
 from pathlib import Path
 from warnings import warn
@@ -47,9 +48,16 @@ from contextlib import suppress
 
 set_ecdh_curve: Optional[Callable[[ssl.SSLContext, str], None]]
 try:
+    if environ.get("SECURE_CONTEXT_NO_EXTENSIONS") is not None:
+        raise ImportError
+
     # Project
     from ._extensions._edhc_curve import set_ecdh_curve
 except ImportError:
+    warn(
+        f"{__name__}: Couldn't load native workaround implementation for registering ECDH curve selection in ssl context",
+        RuntimeWarning,
+    )
     set_ecdh_curve = None
 
 if sys.version_info >= (3, 9):
@@ -112,7 +120,7 @@ _CYPHERS = ":".join(
 # on future-proofing and improved performace of some algorithms.
 _ECDH_CURVES = ["X25519", "secp521r1", "prime256v1", "secp384r1"]
 if ssl.OPENSSL_VERSION_INFO >= (1, 1, 1):
-    _ECDH_CURVES.insert(0, 'X448')
+    _ECDH_CURVES.insert(0, "X448")
 
 _CLIENT_OPTIONS = (
     # Prevent all connections with protocols < TLS 1.2
@@ -361,3 +369,6 @@ def create_client_authentication_ssl_context(
     _load_cert_key_protocols(ctx, str(cert_file), str(key_file), protocols)
 
     return ctx
+
+
+__all__ = ("SSLWarning", "create_server_ssl_context", "create_client_authentication_ssl_context")

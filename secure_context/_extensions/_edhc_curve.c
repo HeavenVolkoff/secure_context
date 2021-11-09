@@ -5,7 +5,7 @@
 // https://github.com/python/cpython/blame/cfc9154121e2d677b782cfadfc90b949b1259332/Modules/_ssl.c#L278-L280
 typedef struct {
   PyObject_HEAD;
-  SSL_CTX *ctx;
+  SSL_CTX* ctx;
 } PySSLContext;
 
 /**
@@ -16,14 +16,21 @@ typedef struct {
  *  Python Software Foundation License Version 2
  * (https://github.com/python/cpython/blob/main/LICENSE)
  */
-static PyObject *_ssl__SSLContext_set_ecdh_curve(PySSLContext *self,
-                                                 PyObject *name) {
-  PyObject *name_bytes;
+static PyObject* _ssl__SSLContext_set_ecdh_curve(PyObject* self,
+                                                 PyObject* args) {
+  PyObject* name;
+  PyObject* name_bytes;
+  PySSLContext* ssl;
+
+  if (!PyArg_ParseTuple(args, "OO", &ssl, &name)) {
+    PyErr_SetString(PyExc_ValueError, "Invalid parameters");
+    return NULL;
+  }
 
   if (!PyUnicode_FSConverter(name, &name_bytes)) return NULL;
   assert(PyBytes_Check(name_bytes));
 
-  if (SSL_CTX_set1_curves_list(self->ctx, PyBytes_AS_STRING(name_bytes))) {
+  if (SSL_CTX_set1_curves_list(ssl->ctx, PyBytes_AS_STRING(name_bytes))) {
     Py_DECREF(name_bytes);
     Py_RETURN_NONE;
   }
@@ -35,8 +42,9 @@ static PyObject *_ssl__SSLContext_set_ecdh_curve(PySSLContext *self,
 
 static PyMethodDef edhc_curve_methods[] = {
     {"set_ecdh_curve", (PyCFunction)_ssl__SSLContext_set_ecdh_curve,
-     METH_VARARGS, PyDoc_STR("Checks if a year is a leap year.")},
-    {NULL}};
+     METH_VARARGS, PyDoc_STR("Register ECDH curve selection in ssl context.")},
+    {NULL, NULL} /* Sentinel */
+};
 
 /* ---------------------------Module Definition------------------------------ */
 
@@ -53,7 +61,7 @@ static struct PyModuleDef moduledef = {
 };
 
 PyMODINIT_FUNC PyInit__edhc_curve(void) {
-  PyObject *module;
+  PyObject* module;
 
   module = PyModule_Create(&moduledef);
 
