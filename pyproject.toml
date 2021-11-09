@@ -3,18 +3,16 @@ name = "secure_context"
 readme = "README.md"
 version = "2.0.0"
 license = "BSD-3-Clause"
+packages = [
+  { include = 'secure_context/**/*.py' },
+  { include = "secure_context/**/*.pyi" },
+  { include = "secure_context/py.typed" },
+  { include = "secure_context/ffdhe4096" },
+]
 include = [
-  { path = "secure_context/py.typed" },
-  { path = "secure_context/**/*.pyi" },
-  { path = "secure_context/ffdhe4096" },
-  # C extensions must be included in the wheel distributions
+  { path = "secure_context/_extensions/*.c", format = "sdist" },
   { path = "secure_context/_extensions/*.so", format = "wheel" },
   { path = "secure_context/_extensions/*.pyd", format = "wheel" },
-]
-exclude = [
-  { path = "secure_context/_extensions/*.c", format = "wheel" },
-  { path = "secure_context/_extensions/.clang-format", format = "wheel" },
-  { path = "secure_context/_extensions/compile_flags.txt", format = "wheel" },
 ]
 authors = ["Vítor Vasconcellos <vasconcellos.dev@gmail.com>"]
 keywords = ["rsa", "x509", "openssl", "security", "certificate"]
