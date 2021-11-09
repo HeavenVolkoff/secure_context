@@ -3,7 +3,7 @@
   - pip install -e .[tests]
   # Use --no-warn-unused-ignores while following issue is not fixed
   # https://github.com/python/mypy/issues/8823
-  - mypy --python-executable "$(which python)" -p antenna.security --no-warn-unused-ignores
+  - mypy --python-executable "$(which python)" -p secure_context --no-warn-unused-ignores
   - time catchsegv python -m unittest discover -s tests
 
 stages:
@@ -26,5 +26,10 @@ test:python38:
 
 test:python39:
   image: python:3.9-buster
+  script:
+    - *test_script_definition
+
+test:python310:
+  image: python:3.10-buster
   script:
     - *test_script_definition

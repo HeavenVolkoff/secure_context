@@ -5,14 +5,17 @@ Offers methods for creation of client and server secure contexts that improve up
 
 Warning
 -------
-    LAST MODIFIED DATE: 21/12/2020
+    LAST MODIFIED DATE: 08/11/2021
     All definitions here must be constantly reviewed and modified to ensure a capable secure system.
 
-TODO
-----
-    Improve ECDH curves selection:
-        https://bugs.python.org/issue32882
-        https://bugs.python.org/issue32883
+Workarounds
+-----------
+    - ECDH curve selection:
+        Currently oficial support for configuring ECDH curves is blocked due to:
+            https://bugs.python.org/issue32882
+            https://bugs.python.org/issue32883
+        As a workaround _extensions._edhc_curve is an implementation of the PR
+        (https://github.com/python/cpython/pull/5771) fixing the above bugs as an external native module.
 
 References
 ----------
@@ -37,22 +40,27 @@ Minimum requirements
 # Internal
 import ssl
 import sys
-import typing as T
-from sys import version_info
+from typing import Any, List, Union, Callable, Optional
 from pathlib import Path
 from warnings import warn
 from contextlib import suppress
 
-if sys.version_info < (3, 9):
-    # External
-    import importlib_resources as resources
-else:
-    # Internal
-    from importlib import resources
+set_ecdh_curve: Optional[Callable[[ssl.SSLContext, str], None]]
+try:
+    # Project
+    from ._extensions._edhc_curve import set_ecdh_curve
+except ImportError:
+    set_ecdh_curve = None
 
+if sys.version_info >= (3, 9):
+    # Internal
+    from importlib.resources import files, as_file
+else:
+    # External
+    from importlib_resources import files, as_file  # type: ignore
 
 # Requirements checks
-if version_info < (3, 6):
+if sys.version_info < (3, 6):
     raise RuntimeError("Minimum required Python version: 3.6")
 
 if ssl.OPENSSL_VERSION_INFO < (1, 1, 0, 8):
@@ -63,9 +71,7 @@ if not getattr(ssl, "HAS_TLSv1_2", hasattr(ssl, "PROTOCOL_TLSv1_2")):
 
 # https://tools.ietf.org/html/rfc4492
 if not ssl.HAS_ECDH:
-    raise RuntimeError(
-        "OpenSSL doesn't support Elliptic Curve-based Diffie-Hellman key" "exchange."
-    )
+    raise RuntimeError("OpenSSL doesn't support Elliptic Curve-based Diffie-Hellman key exchange.")
 
 # https://en.wikipedia.org/wiki/Server_Name_Indication
 if not ssl.HAS_SNI:
@@ -74,7 +80,7 @@ if not ssl.HAS_SNI:
 # https://en.wikipedia.org/wiki/Application-Layer_Protocol_Negotiation
 if not ssl.HAS_ALPN:
     raise RuntimeError(
-        "OpenSSL doesn't support Application Layer Protocol Negotiation TLS" "extension."
+        "OpenSSL doesn't support Application Layer Protocol Negotiation TLS extension."
     )
 
 # Define accepted cryptographic ciphers
@@ -98,10 +104,16 @@ _CYPHERS = ":".join(
         "ECDHE-ECDSA-CHACHA20-POLY1305",
         "ECDHE-RSA-CHACHA20-POLY1305",
         "DHE-RSA-AES256-GCM-SHA384",
-        "DHE-RSA-CHACHA20-POLY1305",
     )
 )
-_ECDH_CURVES = ("prime256v1", "secp521r1", "secp384r1", "X25519")
+
+# Selection of elliptic curves to be used by algorithms based on Elliptic-curve Diffie–Hellman
+# Ordered by preference. All curves included here are trusted industry wide, the order is based
+# on future-proofing and improved performace of some algorithms.
+_ECDH_CURVES = ["X25519", "secp521r1", "prime256v1", "secp384r1"]
+if ssl.OPENSSL_VERSION_INFO >= (1, 1, 1):
+    _ECDH_CURVES.insert(0, 'X448')
+
 _CLIENT_OPTIONS = (
     # Prevent all connections with protocols < TLS 1.2
     # TLS is the successor of SSL, and the current recommended protocol for secure communication
@@ -121,6 +133,7 @@ _CLIENT_OPTIONS = (
     # https://jira.mongodb.org/browse/PYTHON-1726
     | getattr(ssl, "OP_NO_RENEGOTIATION", 0x40000000)
 )
+
 _SERVER_OPTIONS = (
     _CLIENT_OPTIONS
     # Prevents re-use of the same DH key for distinct SSL sessions
@@ -138,16 +151,16 @@ class SSLWarning(RuntimeWarning):
     pass
 
 
-def _str_or_none(obj: T.Any) -> T.Optional[str]:
+def _str_or_none(obj: Any) -> Optional[str]:
     return obj if obj is None else str(obj)
 
 
 def _setup_ca(
     ctx: ssl.SSLContext,
-    ca_file: T.Optional[T.Union[str, Path]],
-    ca_path: T.Optional[T.Union[str, Path]],
-    ca_data: T.Optional[T.Union[bytes, str]],
-    crl_file: T.Optional[T.Union[str, Path]],
+    ca_file: Optional[Union[str, Path]],
+    ca_path: Optional[Union[str, Path]],
+    ca_data: Optional[Union[bytes, str]],
+    crl_file: Optional[Union[str, Path]],
     ca_load_default: bool,
 ) -> bool:
     # Disable workarounds for broken X509 certificates
@@ -194,7 +207,7 @@ def _setup_ca(
 
 
 def _load_cert_key_protocols(
-    ctx: ssl.SSLContext, cert_file: str, key_file: str, protocols: T.Optional[T.List[str]]
+    ctx: ssl.SSLContext, cert_file: str, key_file: str, protocols: Optional[List[str]]
 ) -> None:
     # Load server certificate and private key
     # Raises FileNotFoundError if any given path is invalid
@@ -216,29 +229,31 @@ def _load_cert_key_protocols(
 
 
 def create_server_ssl_context(
-    cert_file: T.Union[Path, str],
-    key_file: T.Union[Path, str],
+    cert_file: Union[Path, str],
+    key_file: Union[Path, str],
     *,
-    ca_file: T.Optional[T.Union[Path, str]] = None,
-    ca_path: T.Optional[T.Union[Path, str]] = None,
-    ca_data: T.Optional[T.Union[bytes, str]] = None,
-    crl_file: T.Optional[T.Union[Path, str]] = None,
-    protocols: T.Optional[T.List[str]] = None,
+    ca_file: Optional[Union[Path, str]] = None,
+    ca_path: Optional[Union[Path, str]] = None,
+    ca_data: Optional[Union[bytes, str]] = None,
+    crl_file: Optional[Union[Path, str]] = None,
+    protocols: Optional[List[str]] = None,
     ca_load_default: bool = False,
 ) -> ssl.SSLContext:
-    """Create SSL context for Antenna servers.
+    """Create SSL context for TLS servers
 
     Args:
         cert_file: Path to SSL certificate file
         key_file: Path to private key file
         ca_file: Path to a file of concatenated CA certificates in PEM format
-        ca_path: Path to a directory containing CA certificates in PEM format, following an OpenSSL
-            specific layout
-        ca_data: ASCII string of one or more PEM-encoded certificates or a bytes-like object of
-            DER-encoded certificates
-        crl_file: Path to a certificate revocation list file.
+        ca_path: Path to a directory containing CA certificates in PEM format, following an OpenSSL specific layout
+        ca_data: ASCII string of one or more PEM-encoded certificates or a bytes-like object of DER-encoded certificates
+        crl_file: Path to a certificate revocation list file
         protocols: ALPN and NPN protocols accepted
         ca_load_default: Whether to load system defaults (default: {False})
+
+    Note:
+        If any of `ca_file`, `ca_path`, `ca_data` are defined client authentication will be enabled, which requires all
+        clients to provide a accepted certificate to connect to the server.
 
     Raises:
         SSLError: Occurs if SSLContext creation fails
@@ -270,16 +285,19 @@ def create_server_ssl_context(
     # Raises SSLError for unavailable or invalid ciphers
     ctx.set_ciphers(_CYPHERS)
 
-    for curve in _ECDH_CURVES:
-        with suppress(ValueError, ssl.SSLError):
-            ctx.set_ecdh_curve(curve)
-            break
+    if set_ecdh_curve is None:
+        for curve in _ECDH_CURVES:
+            with suppress(ValueError, ssl.SSLError):
+                ctx.set_ecdh_curve(curve)
+                break
+        else:
+            raise ssl.SSLError(
+                f"Current OpenSSL does not support any of the ECDH curves in: {', '.join(_ECDH_CURVES)}"
+            )
     else:
-        raise ssl.SSLError(
-            f"Current OpenSSL does not support any of the ECDH curves in: {', '.join(_ECDH_CURVES)}"
-        )
+        set_ecdh_curve(ctx, ":".join(_ECDH_CURVES))
 
-    with resources.path(__package__, "ffdhe4096") as dh_params_path:
+    with as_file(files(__package__) / "ffdhe4096") as dh_params_path:
         # Load Diffie-Hellman parameters
         ctx.load_dh_params(str(dh_params_path))
 
@@ -288,28 +306,30 @@ def create_server_ssl_context(
     return ctx
 
 
-def create_client_ssl_context(
-    cert_file: T.Union[Path, str],
-    key_file: T.Union[Path, str],
+def create_client_authentication_ssl_context(
+    cert_file: Union[Path, str],
+    key_file: Union[Path, str],
     *,
-    ca_file: T.Optional[T.Union[Path, str]] = None,
-    ca_path: T.Optional[T.Union[Path, str]] = None,
-    ca_data: T.Optional[T.Union[bytes, str]] = None,
-    crl_file: T.Optional[T.Union[Path, str]] = None,
-    protocols: T.Optional[T.List[str]] = None,
+    ca_file: Optional[Union[Path, str]] = None,
+    ca_path: Optional[Union[Path, str]] = None,
+    ca_data: Optional[Union[bytes, str]] = None,
+    crl_file: Optional[Union[Path, str]] = None,
+    protocols: Optional[List[str]] = None,
     check_hostname: bool = True,
 ) -> ssl.SSLContext:
-    """Create SSL context for Antenna clients.
+    """Create SSL context for clients that require TLS client authentication
+
+    WARNING:
+        For clients that DO NOT require client authentication,
+        ssl.create_default_context should be used instead
 
     Args:
         cert_file: Path to SSL certificate file
         key_file: Path to private key file
         ca_file: Path to a file of concatenated CA certificates in PEM format
-        ca_path: Path to a directory containing CA certificates in PEM format, following an OpenSSL
-            specific layout
-        ca_data: ASCII string of one or more PEM-encoded certificates or a bytes-like object of
-            DER-encoded certificates
-        crl_file: Path to a certificate revocation list file.
+        ca_path: Path to a directory containing CA certificates in PEM format, following an OpenSSL specific layout
+        ca_data: ASCII string of one or more PEM-encoded certificates or a bytes-like object of DER-encoded certificates
+        crl_file: Path to a certificate revocation list file
         protocols: ALPN and NPN protocols accepted
         check_hostname: Server hostname match (default: {False})
 
