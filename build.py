@@ -56,6 +56,7 @@ def build(setup_kwargs):
                     "secure_context._extensions._edhc_curve",
                     ["secure_context/_extensions/_edhc_curve.c"],
                     libraries=["ssl", "crypto"],
+                    optional=os.environ.get('CIBUILDWHEEL', '0') != '1',
                 ),
             ],
         }

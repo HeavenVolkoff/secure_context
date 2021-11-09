@@ -19,7 +19,7 @@ exclude = [
 authors = ["Vítor Vasconcellos <vasconcellos.dev@gmail.com>"]
 keywords = ["rsa", "x509", "openssl", "security", "certificate"]
 repository = "https://gitlab.com/VitorVasconcellos/secure_context"
-description = "Utilities for creation of security contexts"
+description = "Utilities for creation of SSL/TLS security contexts for servers and clients"
 classifiers = [
   "Topic :: Security",
   "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
