@@ -61,6 +61,9 @@ format = { shell = "isort . && black -q . && npx prettier --write --loglevel=war
 pyright = 'npx pyright'
 update-editor-config = "curl -LO 'https://raw.githubusercontent.com/jokeyrhyme/standard-editorconfig/main/.editorconfig'"
 
+[tool.poe.executor]
+type = "auto"
+
 [tool.mypy]
 pretty = true
 strict = true
