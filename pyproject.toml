@@ -54,7 +54,6 @@ test = [
 # Use --no-warn-unused-ignores while following issue is not fixed https://github.com/python/mypy/issues/8823
 mypy = { shell = 'mypy --python-executable "$(which python)" --no-warn-unused-ignores .' }
 check = ['mypy', 'pyright']
-build = "./build.py"
 format = { shell = "isort . && black -q . && npx prettier --write --loglevel=warn **/*.{md,json} && npx clang-format -i secure_context/_extensions/*.c" }
 pyright = 'npx pyright'
 update-editor-config = "curl -LO 'https://raw.githubusercontent.com/jokeyrhyme/standard-editorconfig/main/.editorconfig'"

@@ -34,7 +34,7 @@ jobs:
         run: |
           pip install -U pip mypy wheel setuptools poethepoet
           sed -i 's/type = "auto"/type = "simple"/' pyproject.toml
-          poe build
+          ./build.py
           pip install .
 
       - name: Mypy

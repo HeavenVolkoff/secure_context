@@ -15,35 +15,6 @@ from distutils.core import Extension, Distribution
 from distutils.errors import CCompilerError, DistutilsExecError, DistutilsPlatformError
 from distutils.command.build_ext import build_ext
 
-
-class BuildFailed(Exception):
-    pass
-
-
-class ExtBuilder(build_ext):
-    # This class allows C extension building to fail.
-
-    built_extensions = []
-
-    def run(self):
-        try:
-            build_ext.run(self)
-        except (DistutilsPlatformError, FileNotFoundError):
-            print(
-                "Unable to build the C extensions, SecureContext will use the pure python code instead.",
-                sys.stderr,
-            )
-
-    def build_extension(self, ext):
-        try:
-            build_ext.build_extension(self, ext)
-        except (CCompilerError, DistutilsExecError, DistutilsPlatformError, ValueError):
-            print(
-                f"Unable to build the {ext.name} C extension, SecureContext will use the pure python version of the extension.",
-                sys.stderr,
-            )
-
-
 def build(setup_kwargs):
     """
     This function is mandatory in order to build the extensions.
@@ -55,15 +26,15 @@ def build(setup_kwargs):
                 Extension(
                     "secure_context._extensions._edhc_curve",
                     ["secure_context/_extensions/_edhc_curve.c"],
+                    optional=True,
                     libraries=["ssl", "crypto"],
-                    optional=os.environ.get("CIBUILDWHEEL", "0") != "1",
                 ),
             ],
         }
     )
     distribution.package_dir = "secure_context"
 
-    cmd = ExtBuilder(distribution)
+    cmd = build_ext(distribution)
     cmd.ensure_finalized()
     cmd.run()
 
