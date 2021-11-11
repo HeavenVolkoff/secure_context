@@ -21,23 +21,23 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           username: ${{ secrets.DOCKERHUB_USERNAME }}
 
-      - id: builder-python3.6
+      - id: builder-python36
         name: Set up Docker Buildx for python 3.6
         uses: docker/setup-buildx-action@v1
 
-      - id: builder-python3.7
+      - id: builder-python37
         name: Set up Docker Buildx for python 3.7
         uses: docker/setup-buildx-action@v1
 
-      - id: builder-python3.8
+      - id: builder-python38
         name: Set up Docker Buildx for python 3.8
         uses: docker/setup-buildx-action@v1
 
-      - id: builder-python3.9
+      - id: builder-python39
         name: Set up Docker Buildx for python 3.9
         uses: docker/setup-buildx-action@v1
 
-      - id: builder-python3.10
+      - id: builder-python310
         name: Set up Docker Buildx for python 3.10
         uses: docker/setup-buildx-action@v1
 
@@ -46,7 +46,7 @@ jobs:
         with:
           push: true
           tags: vvasconcellos/poetry-build:3.6
-          builder: builder-python3.6
+          builder: builder-python36
           context: .
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/386
@@ -59,7 +59,7 @@ jobs:
         with:
           push: true
           tags: vvasconcellos/poetry-build:3.7
-          builder: builder-python3.7
+          builder: builder-python37
           context: .
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/386
@@ -72,7 +72,7 @@ jobs:
         with:
           push: true
           tags: vvasconcellos/poetry-build:3.8
-          builder: builder-python3.8
+          builder: builder-python38
           context: .
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/386
@@ -85,7 +85,7 @@ jobs:
         with:
           push: true
           tags: vvasconcellos/poetry-build:3.9
-          builder: builder-python3.9
+          builder: builder-python39
           context: .
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/386
@@ -98,7 +98,7 @@ jobs:
         with:
           push: true
           tags: vvasconcellos/poetry-build:3.10
-          builder: builder-python3.10
+          builder: builder-python310
           context: .
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/386
