@@ -41,12 +41,12 @@ jobs:
         name: Set up Docker Buildx for python 3.10
         uses: docker/setup-buildx-action@v1
 
-      - name: Build and push
+      - name: Build and push python 3.6
         uses: docker/build-push-action@v2
         with:
           push: true
           tags: vvasconcellos/poetry-build:3.6
-          builder: builder-python36
+          builder: ${{ steps.builder-python36.outputs.name }}
           context: .
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/386
@@ -54,12 +54,12 @@ jobs:
             PYTHON_VERSION=3.6
           cache-from: type=gha
 
-      - name: Build and push
+      - name: Build and push python 3.7
         uses: docker/build-push-action@v2
         with:
           push: true
           tags: vvasconcellos/poetry-build:3.7
-          builder: builder-python37
+          builder: ${{ steps.builder-python37.outputs.name }}
           context: .
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/386
@@ -67,12 +67,12 @@ jobs:
             PYTHON_VERSION=3.7
           cache-from: type=gha
 
-      - name: Build and push
+      - name: Build and push python 3.8
         uses: docker/build-push-action@v2
         with:
           push: true
           tags: vvasconcellos/poetry-build:3.8
-          builder: builder-python38
+          builder: ${{ steps.builder-python38.outputs.name }}
           context: .
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/386
@@ -80,12 +80,12 @@ jobs:
             PYTHON_VERSION=3.8
           cache-from: type=gha
 
-      - name: Build and push
+      - name: Build and push python 3.9
         uses: docker/build-push-action@v2
         with:
           push: true
           tags: vvasconcellos/poetry-build:3.9
-          builder: builder-python39
+          builder: ${{ steps.builder-python39.outputs.name }}
           context: .
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/386
@@ -93,12 +93,12 @@ jobs:
             PYTHON_VERSION=3.9
           cache-from: type=gha
 
-      - name: Build and push
+      - name: Build and push python 3.10
         uses: docker/build-push-action@v2
         with:
           push: true
           tags: vvasconcellos/poetry-build:3.10
-          builder: builder-python310
+          builder: ${{ steps.builder-python310.outputs.name }}
           context: .
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/386
