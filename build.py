@@ -8,12 +8,13 @@ Licensed under:
 """
 
 # Internal
-import os
 import sys
 import shutil
+from os import path, stat, chmod
 from distutils.core import Extension, Distribution
 from distutils.errors import CCompilerError, DistutilsExecError, DistutilsPlatformError
 from distutils.command.build_ext import build_ext
+
 
 def build(setup_kwargs):
     """
@@ -28,6 +29,7 @@ def build(setup_kwargs):
                     ["secure_context/_extensions/_edhc_curve.c"],
                     optional=True,
                     libraries=["ssl", "crypto"],
+                    define_macros=[("Py_LIMITED_API", "0x03060000")],
                 ),
             ],
         }
@@ -40,14 +42,20 @@ def build(setup_kwargs):
 
     # Copy built extensions back to the project
     for output in cmd.get_outputs():
-        relative_extension = os.path.relpath(output, cmd.build_lib)
-        if not os.path.exists(output):
+        relative_extension = path.relpath(output, cmd.build_lib)
+        if not path.exists(output):
             continue
 
+        directory = path.dirname(relative_extension)
+        file_name_parts = path.basename(relative_extension).split(".")
+        if len(file_name_parts) > 2:
+            file_name_parts[-2] = "abi3"
+        relative_extension = f"{directory}/{'.'.join(file_name_parts)}"
+
         shutil.copyfile(output, relative_extension)
-        mode = os.stat(relative_extension).st_mode
+        mode = stat(relative_extension).st_mode
         mode |= (mode & 0o444) >> 2
-        os.chmod(relative_extension, mode)
+        chmod(relative_extension, mode)
 
     return setup_kwargs
 

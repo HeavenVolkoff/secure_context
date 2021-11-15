@@ -1,7 +1,10 @@
+#define PY_SSIZE_T_CLEAN
+#define Py_LIMITED_API 0x03060000
+
 #include <Python.h>
 #include <openssl/ssl.h>
 
-// This partial definition is 12 years old according to git blame
+// This partial definition is, at least, 12 years old according to git blame
 // https://github.com/python/cpython/blame/cfc9154121e2d677b782cfadfc90b949b1259332/Modules/_ssl.c#L278-L280
 typedef struct {
   PyObject_HEAD;
@@ -19,25 +22,21 @@ typedef struct {
 static PyObject* _ssl__SSLContext_set_ecdh_curve(PyObject* self,
                                                  PyObject* args) {
   PyObject* name;
-  PyObject* name_bytes;
   PySSLContext* ssl;
 
-  if (!PyArg_ParseTuple(args, "OO", &ssl, &name)) {
+  if (!PyArg_ParseTuple(args, "OO&", &ssl, &PyUnicode_FSConverter, &name)) {
     PyErr_SetString(PyExc_ValueError, "Invalid parameters");
     return NULL;
   }
 
-  if (!PyUnicode_FSConverter(name, &name_bytes)) return NULL;
-  assert(PyBytes_Check(name_bytes));
-
-  if (SSL_CTX_set1_curves_list(ssl->ctx, PyBytes_AS_STRING(name_bytes))) {
-    Py_DECREF(name_bytes);
+  if (SSL_CTX_set1_curves_list(ssl->ctx, PyBytes_AsString(name))) {
+    Py_DECREF(name);
     Py_RETURN_NONE;
   }
 
-  Py_DECREF(name_bytes);
-  PyErr_Format(PyExc_ValueError, "invalid elliptic curves list %R", name);
-  return NULL;
+  Py_DECREF(name);
+  return PyErr_Format(PyExc_ValueError, "invalid elliptic curves list %s",
+                      name);
 }
 
 static PyMethodDef edhc_curve_methods[] = {

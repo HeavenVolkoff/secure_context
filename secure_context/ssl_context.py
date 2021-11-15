@@ -33,7 +33,7 @@ References
 Minimum requirements
 --------------------
     Python: 3.6
-    OpenSSL: 1.0.1 (With ECDH, SNI and ALPN)
+    OpenSSL: 1.1.0h (With ECDH, SNI and ALPN)
 
 """
 
