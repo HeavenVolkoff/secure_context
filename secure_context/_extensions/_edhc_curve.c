@@ -4,8 +4,8 @@
 #include <Python.h>
 #include <openssl/ssl.h>
 
-// This partial definition is, at least, 12 years old according to git blame
-// https://github.com/python/cpython/blame/cfc9154121e2d677b782cfadfc90b949b1259332/Modules/_ssl.c#L278-L280
+// This partial definition is, at least, 13 years old according to git blame
+// https://github.com/python/cpython/blame/v3.12.0/Modules/_ssl.c#L279-L281
 typedef struct {
   PyObject_HEAD;
   SSL_CTX* ctx;

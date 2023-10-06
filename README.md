@@ -92,6 +92,6 @@ def create_client_authentication_ssl_context(
 
 ## License
 
-Copyright © 2019-2021 Vítor Vasconcellos
+Copyright © 2019-2023 Vítor Vasconcellos
 
 [BSD-3-Clause](./LICENSE)

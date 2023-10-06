@@ -8,11 +8,9 @@ Licensed under:
 """
 
 # Internal
-import sys
 import shutil
 from os import path, stat, chmod
 from distutils.core import Extension, Distribution
-from distutils.errors import CCompilerError, DistutilsExecError, DistutilsPlatformError
 from distutils.command.build_ext import build_ext
 
 

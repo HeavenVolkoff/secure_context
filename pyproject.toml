@@ -49,13 +49,12 @@ poethepoet = "*"
 clean = { shell = 'rm -rf *.whl dist build include; rm -rf secure_context/**/*.so' }
 test = [
   { cmd = 'openssl req -newkey rsa:2048 -sha256 -nodes -keyout cert.key -x509 -days 365 -out cert.pem -subj "/C=US/ST=New York/L=Brooklyn/O=Example Brooklyn Company/CN=YOURDOMAIN.EXAMPLE"' },
-  { shell = 'time catchsegv python -m unittest discover -s tests' },
+  { shell = 'time python -m unittest discover -s tests' },
   { cmd = 'rm cert.key cert.pem' },
 ]
-# Use --no-warn-unused-ignores while following issue is not fixed https://github.com/python/mypy/issues/8823
-mypy = { shell = 'mypy --python-executable "$(which python)" --no-warn-unused-ignores .' }
+mypy = { shell = 'mypy --python-executable "$(which python)" .' }
 check = ['mypy', 'pyright']
-format = { shell = "isort . && black -q . && npx prettier --write --loglevel=warn **/*.{md,json} && npx clang-format -i secure_context/_extensions/*.c" }
+format = { shell = "isort . && black -q . && npx prettier --write --log-level=warn **/*.{md,json} && npx clang-format -i secure_context/_extensions/*.c" }
 pyright = 'npx pyright'
 update-editor-config = "curl -LO 'https://raw.githubusercontent.com/jokeyrhyme/standard-editorconfig/main/.editorconfig'"
 
