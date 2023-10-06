@@ -10,8 +10,8 @@ Licensed under:
 # Internal
 import shutil
 from os import path, stat, chmod
-from distutils.core import Extension, Distribution
-from distutils.command.build_ext import build_ext
+from setuptools import Distribution, Extension
+from setuptools.command.build_ext import build_ext
 
 
 def build(setup_kwargs):
@@ -32,7 +32,6 @@ def build(setup_kwargs):
             ],
         }
     )
-    distribution.package_dir = "secure_context"
 
     cmd = build_ext(distribution)
     cmd.ensure_finalized()
